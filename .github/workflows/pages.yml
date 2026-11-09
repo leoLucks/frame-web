@@ -1,0 +1,134 @@
+name: Deploy FRAME website
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+env:
+  FRAME_VERSION: "0.1.0"
+  FRAME_API_ORIGIN: "https://frame-public-cloud-api.leojames19970101.chatgpt.site"
+  FRAME_PAGES_ORIGIN: "https://leolucks.github.io"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Verify stored artifacts and reconstruct Android APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_dir="releases/v${FRAME_VERSION}"
+          apk="FRAME-${FRAME_VERSION}-android.apk"
+          web="FRAME-${FRAME_VERSION}-web.zip"
+          release_dir="$RUNNER_TEMP/frame-release"
+          mkdir -p "$release_dir"
+          printf '%s  %s\n' \
+            '9b0af33df01f153d48564f6059c4be5bbb5d8baee367fe5f7fc3e367ad7fc65d' "$artifact_dir/$apk.part01" \
+            '194c97efe79ba393139655890ff11a1ad7a3b8d917f8dc36cc7e1ed22c4a4d0f' "$artifact_dir/$apk.part02" \
+            '7b0d8d5308c0e1ad0873b187b7c5371bf0a1ecf4757ebb647bf226dd77066d14' "$artifact_dir/$web" \
+            | sha256sum --check --strict -
+          cat "$artifact_dir/$apk.part01" "$artifact_dir/$apk.part02" > "$release_dir/$apk"
+          printf '%s  %s\n' \
+            'f16db445f4c2562e23ce3c5d415c6855c14502a9e41848b22e22735e3d059a44' "$release_dir/$apk" \
+            | sha256sum --check --strict -
+          printf '%s  %s\n' \
+            'f16db445f4c2562e23ce3c5d415c6855c14502a9e41848b22e22735e3d059a44' "$apk" \
+            | cmp - "$artifact_dir/$apk.sha256"
+          cp "$artifact_dir/$web" "$artifact_dir/$apk.sha256" "$release_dir/"
+          (cd "$release_dir" && sha256sum --check --strict "$apk.sha256")
+      - name: Publish complete versioned Release assets without overwriting existing files
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v${FRAME_VERSION}"
+          apk="FRAME-${FRAME_VERSION}-android.apk"
+          web="FRAME-${FRAME_VERSION}-web.zip"
+          release_dir="$RUNNER_TEMP/frame-release"
+          existing_dir="$(mktemp -d "$RUNNER_TEMP/frame-existing.XXXXXX")"
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json tagName >/dev/null 2>&1; then
+            gh release create "$tag" \
+              "$release_dir/$apk" "$release_dir/$web" "$release_dir/$apk.sha256" \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "FRAME ${FRAME_VERSION}" --notes-file RELEASE_NOTES.md
+          fi
+          for name in "$apk" "$web" "$apk.sha256"; do
+            existing="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets \
+              --jq ".assets[] | select(.name == \"$name\") | .name")"
+            if [[ -n "$existing" ]]; then
+              gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$name" --dir "$existing_dir"
+              cmp "$release_dir/$name" "$existing_dir/$name"
+            else
+              gh release upload "$tag" "$release_dir/$name" --repo "$GITHUB_REPOSITORY"
+            fi
+          done
+          if [[ "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" != "false" ]]; then
+            echo '::error::The existing Release is a draft; publish it before deploying Pages.'
+            exit 1
+          fi
+      - name: Extract the verified compiled website
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          unzip -q "releases/v${FRAME_VERSION}/FRAME-${FRAME_VERSION}-web.zip" -d site
+          test -f site/index.html
+      - name: Require healthy public API and Pages CORS before deploying
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          api_origin = os.environ['FRAME_API_ORIGIN']
+          pages_origin = os.environ['FRAME_PAGES_ORIGIN']
+          opener = urllib.request.build_opener(NoRedirect())
+
+          def read_json(path, body=None):
+              headers = {'Origin': pages_origin, 'Accept': 'application/json'}
+              data = None
+              if body is not None:
+                  headers['Content-Type'] = 'application/json'
+                  data = json.dumps(body).encode('utf-8')
+              req = urllib.request.Request(api_origin + path, data=data, headers=headers, method='GET' if body is None else 'POST')
+              with opener.open(req, timeout=35) as response:
+                  if response.status != 200:
+                      raise RuntimeError('Public API did not return HTTP 200')
+                  if response.headers.get('Access-Control-Allow-Origin') != pages_origin:
+                      raise RuntimeError('Public API did not allow the exact Pages Origin')
+                  if response.headers.get('Access-Control-Allow-Credentials') is not None:
+                      raise RuntimeError('Public API unexpectedly allows credentials')
+                  return json.load(response)
+
+          health = read_json('/api/nikon/health')
+          if health.get('status') != 'ok' or health.get('publicRecipes') is not True or health.get('accountSession') is not False:
+              raise RuntimeError('Public API health response has an unexpected scope')
+          catalog = read_json('/api/nikon/recipes', {'ownerUserId': 'nikon', 'bookId': '', 'sortType': 0, 'lang_code': 'zh-cn', 'country': 'CN'})
+          if not isinstance(catalog.get('recipe'), list) or not catalog['recipe'] or not isinstance(catalog.get('recipe_book'), list):
+              raise RuntimeError('Public API returned no public recipes')
+          print('Public API HTTP 200 and exact Pages CORS verified; public recipes:', len(catalog['recipe']))
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
