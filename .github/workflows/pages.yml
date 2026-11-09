@@ -92,31 +92,37 @@ jobs:
           python3 - <<'PY'
           import json
           import os
-          import urllib.request
-
-          class NoRedirect(urllib.request.HTTPRedirectHandler):
-              def redirect_request(self, req, fp, code, msg, headers, newurl):
-                  return None
+          import pathlib
+          import subprocess
+          import tempfile
 
           api_origin = os.environ['FRAME_API_ORIGIN']
           pages_origin = os.environ['FRAME_PAGES_ORIGIN']
-          opener = urllib.request.build_opener(NoRedirect())
 
           def read_json(path, body=None):
-              headers = {'Origin': pages_origin, 'Accept': 'application/json'}
-              data = None
-              if body is not None:
-                  headers['Content-Type'] = 'application/json'
-                  data = json.dumps(body).encode('utf-8')
-              req = urllib.request.Request(api_origin + path, data=data, headers=headers, method='GET' if body is None else 'POST')
-              with opener.open(req, timeout=35) as response:
-                  if response.status != 200:
-                      raise RuntimeError('Public API did not return HTTP 200')
-                  if response.headers.get('Access-Control-Allow-Origin') != pages_origin:
+              with tempfile.TemporaryDirectory() as temp:
+                  headers_path = pathlib.Path(temp) / 'headers'
+                  body_path = pathlib.Path(temp) / 'body.json'
+                  command = ['curl', '--silent', '--show-error', '--connect-timeout', '10', '--max-time', '35',
+                             '--request', 'GET' if body is None else 'POST',
+                             '--header', 'Origin: ' + pages_origin, '--header', 'Accept: application/json',
+                             '--dump-header', str(headers_path), '--output', str(body_path), '--write-out', '%{http_code}']
+                  if body is not None:
+                      command += ['--header', 'Content-Type: application/json', '--data-binary', json.dumps(body)]
+                  command += [api_origin + path]
+                  response = subprocess.run(command, check=True, capture_output=True, text=True)
+                  if response.stdout.strip() != '200':
+                      raise RuntimeError('Public API did not return HTTP 200: ' + response.stdout.strip())
+                  headers = {}
+                  for line in headers_path.read_text().splitlines():
+                      if ':' in line:
+                          name, value = line.split(':', 1)
+                          headers[name.lower()] = value.strip()
+                  if headers.get('access-control-allow-origin') != pages_origin:
                       raise RuntimeError('Public API did not allow the exact Pages Origin')
-                  if response.headers.get('Access-Control-Allow-Credentials') is not None:
+                  if headers.get('access-control-allow-credentials') is not None:
                       raise RuntimeError('Public API unexpectedly allows credentials')
-                  return json.load(response)
+                  return json.loads(body_path.read_text())
 
           health = read_json('/api/nikon/health')
           if health.get('status') != 'ok' or health.get('publicRecipes') is not True or health.get('accountSession') is not False:
