@@ -1,29 +1,23 @@
-# FRAME 0.1.0
+# FRAME 0.1.1
 
-[打开网页版](https://leolucks.github.io/frame-web/) · [版本说明与下载](https://github.com/leoLucks/frame-web/releases/tag/v0.1.0)
+[FRAME 官网](https://leolucks.github.io/frame-web/official/) · [网页版](https://leolucks.github.io/frame-web/) · [Android 下载](https://github.com/leoLucks/frame-web/releases/download/v0.1.1/FRAME-0.1.1-android.apk)
 
-此公开仓库存放编译网页 ZIP、Android APK 的两个分片、校验文件及发布工作流。App 工程源代码保存在独立的私有仓库。
+- 新增 FRAME 产品官网与统一下载入口
+- Android 支持联网检查版本、下载进度与安装包校验
+- 校验包名、版本与签名后，由 Android 系统确认安装
 
-## 安装
+现有 0.1.0 需先手动覆盖安装 0.1.1；之后可在 App 的「偏好与存储 → 版本更新」中检查、下载更新。安装最终由 Android 系统确认，下载校验失败会停止安装。
 
-[下载完整 Android 0.1.0 APK](https://github.com/leoLucks/frame-web/releases/download/v0.1.0/FRAME-0.1.0-android.apk)：`FRAME-0.1.0-android.apk`（16,433,091 字节）。仓库中的 `.part01` 与 `.part02` 由 Actions 合并，请直接安装 Release 中的完整 APK。
+APK：FRAME-0.1.1-android.apk（16601401 字节），SHA-256：`8d28a2743ebf5b3bc853993cb7a2b30fdc2c10c4d3f2eac6100379ab5c2c8474`
 
-SHA-256：`f16db445f4c2562e23ce3c5d415c6855c14502a9e41848b22e22735e3d059a44`
+网页：FRAME-0.1.1-web.zip，SHA-256：`e2d54c9aace05dc6aea20108c627c35d18ee849b4856aa25c4f12d317332243b`
 
-iOS 尚未开放下载。Android 当前沿用 Android Debug 开发签名，后续应用商店分发需要发布签名。
+安装包签名与 0.1.0 一致，当前仍沿用开发签名。Android 端的下载和系统安装交互尚待真机验收。iOS 尚无已签名安装包；相机传图、遥控与私人云创同步仍在完善和验证中。
 
-## 功能范围
+## 发布与更新服务
 
-网页支持浏览器本地照片管理、13 款水印、六角度相机展示和公开云创方案。私人账户同步尚待真实账户验证；在线网页无法建立相机 TCP 会话。App 相机配对与控制待真机验收，相机传图与遥控拍摄尚未完整接通。
+此公开仓库仅存放编译产物、安装包分片和 Pages 工作流，原 App 工程源码保持私有。
 
-公开云创方案使用[独立只读 API](https://frame-public-cloud-api.leojames19970101.chatgpt.site/api/nikon/health)，不转发访问者的账户凭据。
+官网与 App 共用 [stable.json](https://leolucks.github.io/frame-web/updates/stable.json) 版本清单。工作流在发布完整安装包并校验公开云创 API 后上线网页和版本清单。已有版本附件只核对、不覆盖。
 
-## 发布与部署
-
-`releases/v0.1.0/` 包含 `FRAME-0.1.0-web.zip`、`FRAME-0.1.0-android.apk.part01`、`FRAME-0.1.0-android.apk.part02` 和 `FRAME-0.1.0-android.apk.sha256`。每个 APK 分片不超过 8 MiB。
-
-Settings → Pages → Source 选择 GitHub Actions。推送 main 或手动运行 Deploy FRAME website 后，工作流先校验分片和网页 ZIP，再合并并校验完整 APK；使用工作流默认 token 发布完整 APK、网页 ZIP 和校验文件到 v0.1.0 Release。已有同名附件会下载并逐字节核对，内容不同会停止发布。
-
-网页 ZIP 的 SHA-256 为 `7b0d8d5308c0e1ad0873b187b7c5371bf0a1ecf4757ebb647bf226dd77066d14`。工作流解压仓库内的 ZIP，并检查公开 API 的 health GET、recipes POST 均返回 HTTP 200、精确 Pages Origin 的 CORS 头及非空方案列表；检查失败会阻止 Pages 部署。
-
-详细功能范围与安装说明见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
+后续发布需递增 package.json 的 version 与 frameVersionCode，沿用同一 Android 签名，重新构建后运行 prepare-public-release。完整安装包由 Actions 从两个分片重建，用户下载 Release 中的完整 APK。

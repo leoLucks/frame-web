@@ -1,17 +1,15 @@
-# FRAME 0.1.0
+# FRAME 0.1.1
 
-[打开网页版](https://leolucks.github.io/frame-web/) · [下载 Android APK](https://github.com/leoLucks/frame-web/releases/download/v0.1.0/FRAME-0.1.0-android.apk)
+[FRAME 官网](https://leolucks.github.io/frame-web/official/) · [网页版](https://leolucks.github.io/frame-web/) · [Android 下载](https://github.com/leoLucks/frame-web/releases/download/v0.1.1/FRAME-0.1.1-android.apk)
 
-本版本提供浏览器本地照片管理、13 款尼康水印、六角度相机展示和公开尼康云创方案浏览。网页的公开云创 API 不接收私人账户凭据；相机本地会话需要 App 或电脑本机服务。
+- 新增 FRAME 产品官网与统一下载入口
+- Android 支持联网检查版本、下载进度与安装包校验
+- 校验包名、版本与签名后，由 Android 系统确认安装
 
-Android：`FRAME-0.1.0-android.apk`，16,433,091 字节。
+现有 0.1.0 需先手动覆盖安装 0.1.1；之后可在 App 的「偏好与存储 → 版本更新」中检查、下载更新。安装最终由 Android 系统确认，下载校验失败会停止安装。
 
-SHA-256：`f16db445f4c2562e23ce3c5d415c6855c14502a9e41848b22e22735e3d059a44`
+APK：FRAME-0.1.1-android.apk（16601401 字节），SHA-256：`8d28a2743ebf5b3bc853993cb7a2b30fdc2c10c4d3f2eac6100379ab5c2c8474`
 
-网页：`FRAME-0.1.0-web.zip`，11,894,744 字节。
+网页：FRAME-0.1.1-web.zip，SHA-256：`e2d54c9aace05dc6aea20108c627c35d18ee849b4856aa25c4f12d317332243b`
 
-SHA-256：`7b0d8d5308c0e1ad0873b187b7c5371bf0a1ecf4757ebb647bf226dd77066d14`
-
-APK 使用 Android Debug 开发签名，尚未完成真实 Android 设备与相机验收。完整相机传图、遥控拍摄和私人尼康云创账户同步尚未完整接通或验证。iOS 当前无已签名安装包。
-
-Release 附件提供完整 APK，仓库内 APK 分片仅供 Actions 校验与重建。请下载安装完整 `.apk` 文件。
+安装包签名与 0.1.0 一致，当前仍沿用开发签名。Android 端的下载和系统安装交互尚待真机验收。iOS 尚无已签名安装包；相机传图、遥控与私人云创同步仍在完善和验证中。
