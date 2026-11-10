@@ -4,6 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
+  actions: read
   contents: write
   pages: write
   id-token: write
@@ -11,6 +12,7 @@ concurrency:
   group: github-pages
   cancel-in-progress: false
 env:
+  FRAME_PAGES_ARTIFACT: frame-pages-${{ github.run_id }}-${{ github.run_attempt }}
   FRAME_VERSION: "0.1.2"
   FRAME_VERSION_CODE: "5"
   FRAME_API_ORIGIN: "https://frame-public-cloud-api.leojames19970101.chatgpt.site"
@@ -152,6 +154,32 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
+          name: ${{ env.FRAME_PAGES_ARTIFACT }}
           path: site
+      - name: Wait for the current Pages artifact to be visible
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          visible=0
+          for attempt in $(seq 1 30); do
+            count="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" \
+              --jq "[.artifacts[] | select(.name == \"$FRAME_PAGES_ARTIFACT\" and .expired == false)] | length" || echo 0)"
+            if [ "$count" = 1 ]; then
+              visible=$((visible + 1))
+              if [ "$visible" -ge 2 ]; then
+                echo "Current Pages artifact is visible"
+                exit 0
+              fi
+            else
+              visible=0
+            fi
+            sleep 2
+          done
+          echo "Current Pages artifact did not become visible in time" >&2
+          exit 1
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ env.FRAME_PAGES_ARTIFACT }}
