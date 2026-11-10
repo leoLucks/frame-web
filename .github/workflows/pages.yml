@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: false
 env:
   FRAME_PAGES_ARTIFACT: frame-pages-${{ github.run_id }}-${{ github.run_attempt }}
-  FRAME_VERSION: "0.1.3"
-  FRAME_VERSION_CODE: "6"
+  FRAME_VERSION: "0.1.5"
+  FRAME_VERSION_CODE: "8"
   FRAME_API_ORIGIN: "https://frame-public-cloud-api.leojames19970101.chatgpt.site"
   FRAME_PAGES_ORIGIN: "https://leolucks.github.io"
 jobs:
@@ -37,16 +37,16 @@ jobs:
           release_dir="$RUNNER_TEMP/frame-release"
           mkdir -p "$release_dir"
           printf '%s  %s\n' \
-            '6ce9f0803da85373a31210b1d6ae89ef2c6f99560363fe0b3654850d6722be02' "$artifact_dir/$apk.part01" \
-            '22c304b72653137c189da9783b52af300bded207f68b5666a61b6dd02388d6cb' "$artifact_dir/$apk.part02" \
-            'ccf348975ac35cab1ba6be782b6278846a0bb1d9ae452e93bc0dc4fa7197450b' "$artifact_dir/$web" \
+            '71e66c04f0728af0091ac68ecea47cd1f73ff88c6d82c04bc9696c9442fe5ab9' "$artifact_dir/$apk.part01" \
+            '17a30cf1f96b9573d4aa4ec4ac28528699c514fcbf9cd3c8bc10820d839dc733' "$artifact_dir/$apk.part02" \
+            '9eb47e6012533d8004631d6a9aa619b14eb0ef50a093b9f960be6b3b8f0775e2' "$artifact_dir/$web" \
             | sha256sum --check --strict -
           cat "$artifact_dir/$apk.part01" "$artifact_dir/$apk.part02" > "$release_dir/$apk"
           printf '%s  %s\n' \
-            'c52b0c1e35536d964ca52d87b7a238ecab3429fa09164e4b20f096e0f6e9f942' "$release_dir/$apk" \
+            'b8b2bbf3ca8ee62b2d67a73615739bcff778a116dd584071fb28f05240b8af35' "$release_dir/$apk" \
             | sha256sum --check --strict -
           printf '%s  %s\n' \
-            'c52b0c1e35536d964ca52d87b7a238ecab3429fa09164e4b20f096e0f6e9f942' "$apk" \
+            'b8b2bbf3ca8ee62b2d67a73615739bcff778a116dd584071fb28f05240b8af35' "$apk" \
             | cmp - "$artifact_dir/$apk.sha256"
           cp "$artifact_dir/$web" "$artifact_dir/$apk.sha256" "$release_dir/"
           (cd "$release_dir" && sha256sum --check --strict "$apk.sha256")
