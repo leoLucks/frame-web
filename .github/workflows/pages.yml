@@ -39,7 +39,7 @@ jobs:
           printf '%s  %s\n' \
             '1e3ec8fbeffdffe795c2689761c0659d16e08d0e538671f3a74113ab3ead54c4' "$artifact_dir/$apk.part01" \
             '1e5c2680ce1ee53a4b4982fa8299514a068d4b47067c135a9e77c5f02bf89e1f' "$artifact_dir/$apk.part02" \
-            '58c469f4b242987a20ec660e425aa92e25c7ddbaa804938e26f853d0dd8bbddd' "$artifact_dir/$web" \
+            '5c249b249026329d85b39721763e530ceeb7239971308d0b41a25d00e8f02901' "$artifact_dir/$web" \
             | sha256sum --check --strict -
           cat "$artifact_dir/$apk.part01" "$artifact_dir/$apk.part02" > "$release_dir/$apk"
           printf '%s  %s\n' \
@@ -67,7 +67,8 @@ jobs:
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --title "FRAME ${FRAME_VERSION}" --notes-file RELEASE_NOTES.md
           fi
-          for name in "$apk" "$web" "$apk.sha256"; do
+          # Pages can receive web-only hotfixes without replacing immutable v0.1.6 Release assets.
+          for name in "$apk" "$apk.sha256"; do
             existing="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets \
               --jq ".assets[] | select(.name == \"$name\") | .name")"
             if [[ -n "$existing" ]]; then
