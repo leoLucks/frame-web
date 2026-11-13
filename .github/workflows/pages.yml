@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: false
 env:
   FRAME_PAGES_ARTIFACT: frame-pages-${{ github.run_id }}-${{ github.run_attempt }}
-  FRAME_VERSION: "0.1.6"
-  FRAME_VERSION_CODE: "9"
+  FRAME_VERSION: "0.1.7"
+  FRAME_VERSION_CODE: "10"
   FRAME_API_ORIGIN: "https://frame-public-cloud-api.leojames19970101.chatgpt.site"
   FRAME_PAGES_ORIGIN: "https://leolucks.github.io"
 jobs:
@@ -37,16 +37,17 @@ jobs:
           release_dir="$RUNNER_TEMP/frame-release"
           mkdir -p "$release_dir"
           printf '%s  %s\n' \
-            '1e3ec8fbeffdffe795c2689761c0659d16e08d0e538671f3a74113ab3ead54c4' "$artifact_dir/$apk.part01" \
-            '1e5c2680ce1ee53a4b4982fa8299514a068d4b47067c135a9e77c5f02bf89e1f' "$artifact_dir/$apk.part02" \
-            '5c249b249026329d85b39721763e530ceeb7239971308d0b41a25d00e8f02901' "$artifact_dir/$web" \
+            '6ed9ed0540fdf248a599b2151e77d46d9500eb74b7931873d2869f0e6a618db5' "$artifact_dir/$apk.part01" \
+            '8f291e064b3658107bd6cfae8fffeb2fd3febd0d862a0c83ea7ea5f0cd13f55e' "$artifact_dir/$apk.part02" \
+            '5d64a91685e370e5a9ed96f55178d23d23b42f7bed3f011bc6d4c10794123062' "$artifact_dir/$apk.part03" \
+            '5f58d2fb9f4a7a510188f22ea7ec046e4471f56e2688303cccf6de5a38341e18' "$artifact_dir/$web" \
             | sha256sum --check --strict -
-          cat "$artifact_dir/$apk.part01" "$artifact_dir/$apk.part02" > "$release_dir/$apk"
+          cat "$artifact_dir/$apk.part01" "$artifact_dir/$apk.part02" "$artifact_dir/$apk.part03" > "$release_dir/$apk"
           printf '%s  %s\n' \
-            '092d4dfbaf3a3a7eaa8d27aa1646db08b215205411dc7abfe011ead10cdb1e5a' "$release_dir/$apk" \
+            'e9c40bd8104bea13fde1909ef14bc21eaeaab7ab2d9864037984dd4829a2efaa' "$release_dir/$apk" \
             | sha256sum --check --strict -
           printf '%s  %s\n' \
-            '092d4dfbaf3a3a7eaa8d27aa1646db08b215205411dc7abfe011ead10cdb1e5a' "$apk" \
+            'e9c40bd8104bea13fde1909ef14bc21eaeaab7ab2d9864037984dd4829a2efaa' "$apk" \
             | cmp - "$artifact_dir/$apk.sha256"
           cp "$artifact_dir/$web" "$artifact_dir/$apk.sha256" "$release_dir/"
           (cd "$release_dir" && sha256sum --check --strict "$apk.sha256")
@@ -67,8 +68,7 @@ jobs:
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --title "FRAME ${FRAME_VERSION}" --notes-file RELEASE_NOTES.md
           fi
-          # Pages can receive web-only hotfixes without replacing immutable v0.1.6 Release assets.
-          for name in "$apk" "$apk.sha256"; do
+          for name in "$apk" "$web" "$apk.sha256"; do
             existing="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets \
               --jq ".assets[] | select(.name == \"$name\") | .name")"
             if [[ -n "$existing" ]]; then
